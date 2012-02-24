@@ -16,7 +16,7 @@ char host[] = "http://beer-buddy.nl";
 BeerBuddyRfid rfid(2, 3);
 BeerBuddyEthernet ethernet(mac, ip, host);
 
-bool validCard;
+bool cardPresent;
 
 void setup()
 {
@@ -33,13 +33,18 @@ void loop()
 {
   ethernet.enableKeepAlive();
   
-  validCard = rfid.checkCard();
+  cardPresent = rfid.checkCard();
   
-  if ( validCard == true )
+  if ( cardPresent == true )
   {
-    Serial.println(validCard);
-    Serial.println(rfid.getCard());
+    Serial.println(cardPresent);
     
-    validCard = false;
+    char* card = rfid.getCard();
+    
+    Serial.println(card);
+    
+    ethernet.sendRFID(card);
+    
+    cardPresent = false;
   }
 }
