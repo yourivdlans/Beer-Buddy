@@ -1,10 +1,13 @@
 #include <SPI.h>
 #include <Ethernet.h>
+#include <Servo.h>
 
 #include <SoftwareSerial.h>
 
 #include <BeerBuddyRfid.h>
 #include <BeerBuddyEthernet.h>
+#include <BeerBuddyUser.h>
+#include <BeerBuddyDraft.h>
 
 #define RED 8
 #define GREEN 7
@@ -15,8 +18,11 @@ char host[] = "http://beer-buddy.nl";
 
 BeerBuddyRfid rfid(2, 3);
 BeerBuddyEthernet ethernet(mac, ip, host);
+BeerBuddyDraft draft(6, 5);
 
 bool cardPresent;
+char* card;
+int enableLed = 0;
 
 void setup()
 {
@@ -27,24 +33,52 @@ void setup()
   
   ethernet.initialize();
   ethernet.setOnline();
+  
+  draft.setupServos();
 }
 
-void loop()
+void checkForCard()
 {
-  ethernet.enableKeepAlive();
-  
   cardPresent = rfid.checkCard();
   
   if ( cardPresent == true )
   {
     Serial.println(cardPresent);
     
-    char* card = rfid.getCard();
+    card = rfid.getCard();
     
     Serial.println(card);
     
-    ethernet.sendRFID(card);
+    if ( ethernet.sendRFID(card) )
+    {
+      enableLed = GREEN;
+      
+      draft.draftBeer();
+    }
+    else
+    {
+      enableLed = RED;
+    }
     
     cardPresent = false;
   }
+}
+
+void checkForLedEnable()
+{
+  if ( enableLed != 0 )
+  {
+    if ( !rfid.setLed(enableLed, 1000) )
+    {
+      enableLed = 0;
+    }
+  }
+}
+
+void loop()
+{
+  //ethernet.enableKeepAlive();
+  
+  checkForCard();
+  checkForLedEnable();
 }
